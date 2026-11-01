@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>[hidden]{display:none!important}body{margin:0}img{max-width:100%}</style>
+<title>3つの町の12人</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap">
+<style>
+/* Layout: 避難誘導標識の緑のバー＋左に町の模式図、右に時計・自分のカード・行動ボタン。地域ごとに災害の色（津波=青／火災=橙／豪雨の夜=紺）が加わる */
+:root{
+  --bg:#eef2ef; --paper:#fbfcfa; --ink:#14212a; --muted:#5d6d76; --line:#cdd6d2;
+  --sign:#007a47; --sign-ink:#fff;
+  --ground:#e6ecd9; --road:#f1f3ea; --sand:#efe3c2; --sea:#3d7fc4; --sea2:#5c97d3; --river:#8fbbe6;
+  --house:#c8c2b6; --wood:#d8b98f; --hill:#9cc68a; --hill2:#7fb36c; --bldg:#d9dde3; --old:#b9b2a7; --npc:#6e7c86;
+  --fire:#e4572e; --fire2:#f2a541; --flood:#4f86c6; --fog:#1d2a33; --crowd:#e9d8f0;
+  --warn:#e0a100; --bad:#c9381e; --good:#1b8a55; --sel:#f2b705;
+  --shadow:0 1px 0 rgba(20,33,42,.06),0 8px 20px -10px rgba(20,33,42,.3);
+  --f-display:"Dela Gothic One","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1719; --paper:#172226; --ink:#e4ece8; --muted:#9db0aa; --line:#2c3b3f;
+  --sign:#20a866; --sign-ink:#06120c;
+  --ground:#25321f; --road:#2c3528; --sand:#4a4230; --sea:#1f4f86; --sea2:#2c63a0; --river:#2f5f8f;
+  --house:#4b4740; --wood:#5e4a32; --hill:#3f6b36; --hill2:#355d2d; --bldg:#3c444d; --old:#5a544c; --npc:#7f8d97;
+  --fire:#ff6a3d; --fire2:#ffae4a; --flood:#2e6aaf; --fog:#05090c; --crowd:#3d3045;
+  --warn:#f0b72c; --bad:#ff7a5c; --good:#3cc488; --sel:#f5c842;
+  --shadow:0 1px 0 rgba(0,0,0,.3),0 8px 22px -10px rgba(0,0,0,.6); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1719; --paper:#172226; --ink:#e4ece8; --muted:#9db0aa; --line:#2c3b3f;
+  --sign:#20a866; --sign-ink:#06120c;
+  --ground:#25321f; --road:#2c3528; --sand:#4a4230; --sea:#1f4f86; --sea2:#2c63a0; --river:#2f5f8f;
+  --house:#4b4740; --wood:#5e4a32; --hill:#3f6b36; --hill2:#355d2d; --bldg:#3c444d; --old:#5a544c; --npc:#7f8d97;
+  --fire:#ff6a3d; --fire2:#ffae4a; --flood:#2e6aaf; --fog:#05090c; --crowd:#3d3045;
+  --warn:#f0b72c; --bad:#ff7a5c; --good:#3cc488; --sel:#f5c842;
+  --shadow:0 1px 0 rgba(0,0,0,.3),0 8px 22px -10px rgba(0,0,0,.6); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 32px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,.cell:focus-visible{outline:3px solid var(--sel);outline-offset:2px}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;line-height:1.25;text-wrap:balance;margin:0}
+.wrap{max-width:1180px;margin:0 auto}
+.topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--sign);color:var(--sign-ink);
+  margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px))) 16px;padding:10px max(16px,env(safe-area-inset-left,0px))}
+.logo{display:flex;align-items:center;gap:10px}
+.logo h1{font-size:21px}
+.logo small{display:block;font-size:11px;font-weight:700;opacity:.85;letter-spacing:.06em;font-family:var(--f-body)}
+.sp{flex:1}
+.tb{background:transparent;border:1.5px solid currentColor;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:700;color:var(--sign-ink)}
+.btn{border:0;border-radius:10px;padding:12px 16px;font-weight:900;font-size:15px;background:var(--paper);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line);text-align:center}
+.btn.go{background:var(--sign);color:var(--sign-ink);box-shadow:none}
+.btn.dark{background:var(--ink);color:var(--paper);box-shadow:none}
+.btn.red{background:var(--bad);color:#fff;box-shadow:none}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn small{display:block;font-weight:700;font-size:11.5px;opacity:.75}
+.crumb{border:0;background:none;color:var(--sign);font-weight:900;padding:0;font-size:14px}
+
+/* ---------- select ---------- */
+.select{display:grid;gap:18px;padding-block:8px}
+.select>*{min-width:0}
+.select h2{font-size:clamp(26px,4.4vw,46px)}
+.select h2 em{font-style:normal;color:var(--sign)}
+.select>p{margin:0;color:var(--muted);font-size:16px;max-width:60ch}
+.regions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.rg{display:grid;gap:8px;align-content:start;text-align:left;border:0;background:var(--paper);border-radius:16px;padding:18px;box-shadow:var(--shadow);border-top:6px solid var(--c)}
+.rg .k{font-size:12px;font-weight:900;letter-spacing:.08em;color:var(--muted)}
+.rg .nm{font-family:var(--f-display);font-size:26px;line-height:1.2}
+.rg .sc{font-size:13.5px}
+.rg .pr{font-size:13px;font-weight:900;color:var(--sign)}
+.chars{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.ch{display:grid;gap:10px;align-content:start;text-align:left;border:0;background:var(--paper);border-radius:16px;padding:16px;box-shadow:var(--shadow);position:relative}
+.face{border-radius:12px;display:grid;place-items:center;color:#fff;font-family:var(--f-display)}
+.ch .face{width:56px;height:56px;font-size:28px}
+.ch .nm{font-family:var(--f-display);font-size:19px;line-height:1.2}
+.ch .nm small{display:block;font-family:var(--f-body);font-weight:700;font-size:12.5px;color:var(--muted)}
+.ch .rule{font-weight:700;font-size:14px}
+.ch .go{font-weight:900;color:var(--sign);font-size:14px}
+.badge{font-size:12px;font-weight:900;padding:3px 9px;border-radius:6px;display:inline-block}
+.ch .badge{position:absolute;top:14px;right:14px}
+.b-safe{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.b-lost{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+.hmc{display:inline-block;font-size:11.5px;font-weight:900;padding:2px 8px;border-radius:6px;margin-top:4px;width:fit-content}
+.hm1{background:color-mix(in srgb,var(--sign) 16%,transparent);color:var(--sign)}
+.hm0{background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted)}
+.scene{background:var(--paper);border-radius:14px;padding:12px 16px;box-shadow:var(--shadow);font-weight:700;border-left:6px solid var(--c)}
+
+/* ---------- play ---------- */
+.play{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+.play>*,.summary>*{min-width:0}
+.mapbox{background:var(--paper);border-radius:14px;padding:10px;box-shadow:var(--shadow)}
+.map{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:3px}
+.cell{position:relative;aspect-ratio:1;border-radius:6px;background:var(--road);overflow:hidden}
+.t-eq{background:var(--sand)!important}
+.t-sea{background:repeating-linear-gradient(160deg,var(--sea) 0 9px,var(--sea2) 9px 12px)!important}
+.t-river{background:var(--river)!important}
+.t-bridge{background:linear-gradient(90deg,var(--river) 0 12%,#a07b52 12% 88%,var(--river) 88%)!important}
+.t-bridgeh{background:linear-gradient(0deg,var(--river) 0 12%,#a07b52 12% 88%,var(--river) 88%)!important}
+.t-house{background:var(--ground)!important}
+.t-house::after,.t-wh::after{content:"";position:absolute;inset:22% 18% 18%;background:var(--house);clip-path:polygon(50% 0,100% 40%,100% 100%,0 100%,0 40%)}
+.t-wh{background:var(--ground)!important}.t-wh::after{background:var(--wood)}
+.t-bldg2{background:var(--ground)!important}.t-bldg2::after{content:"";position:absolute;inset:14% 26% 10%;background:var(--bldg);border-radius:2px}
+.t-alley{background:repeating-linear-gradient(90deg,var(--road) 0 6px,var(--wood) 6px 8px)!important}
+.t-X{background:repeating-linear-gradient(45deg,var(--house) 0 6px,var(--old) 6px 12px)!important}
+.t-hill{background:radial-gradient(circle at 50% 75%,var(--hill) 0 55%,var(--hill2) 56%)!important}
+.t-slope{background:repeating-linear-gradient(135deg,var(--road) 0 7px,color-mix(in srgb,var(--old) 70%,var(--road)) 7px 10px)!important}
+.t-low{background:color-mix(in srgb,var(--river) 35%,var(--road))!important}
+.t-port{background:color-mix(in srgb,var(--bldg) 60%,var(--road))!important}
+.t-crowd{background:var(--crowd)!important}
+.t-site{background:var(--bldg)!important}
+.t-park{background:color-mix(in srgb,var(--hill) 70%,var(--road))!important}
+.t-tower{background:linear-gradient(90deg,var(--bldg) 0 20%,var(--old) 20% 80%,var(--bldg) 80%)!important}
+.t-fire{background:radial-gradient(circle at 50% 70%,var(--fire2) 0 30%,var(--fire) 60%)!important;animation:flick 1.2s infinite alternate}
+@keyframes flick{to{filter:brightness(1.15)}}
+.t-flood{background:repeating-linear-gradient(160deg,var(--flood) 0 9px,var(--sea2) 9px 12px)!important}
+.t-smoke{background:repeating-radial-gradient(circle at 30% 30%,var(--old) 0 6px,var(--house) 6px 12px)!important}
+.cell .nm{position:absolute;left:4px;top:2px;right:2px;font-size:clamp(8px,1.05vw,11px);font-weight:900;line-height:1.1;color:var(--ink);text-shadow:0 0 3px var(--paper),0 0 3px var(--paper);z-index:1;pointer-events:none}
+.cell .ht{position:absolute;right:4px;bottom:1px;font-family:var(--f-display);font-size:clamp(12px,2vw,22px);line-height:1;color:var(--ink);opacity:.8;pointer-events:none}
+.cell .ht small{font-size:.5em}
+.cell.lock::before{content:"×";position:absolute;inset:0;display:grid;place-items:center;font-size:clamp(20px,4vw,40px);color:var(--bad);font-weight:900;z-index:1}
+.cell.reach{box-shadow:inset 0 0 0 3px var(--sel);cursor:pointer}
+.cell.reach::before{content:"";position:absolute;inset:0;background:var(--sel);opacity:.28}
+.cell.danger{box-shadow:inset 0 0 0 3px var(--fire)}
+.cell.danger.reach{box-shadow:inset 0 0 0 3px var(--fire),inset 0 0 0 6px var(--sel)}
+.cell.fog{background:var(--fog)!important}
+.cell.fog::after{display:none}
+.cell.fog .nm{color:#c9d4d0;text-shadow:none;opacity:.8}
+.cell.home .nm{color:var(--bad)}
+.cell.flooded{background:repeating-linear-gradient(160deg,var(--sea) 0 9px,var(--sea2) 9px 12px)!important}
+.cell.flooded::after{display:none}
+.cell.site .toks{right:36%}
+.toks{position:absolute;inset:18% 3% 3%;display:flex;flex-wrap:wrap;gap:2px;align-content:flex-end;z-index:2;pointer-events:none}
+.tok{width:clamp(14px,2.4vw,24px);height:clamp(14px,2.4vw,24px);border-radius:50%;display:grid;place-items:center;font-size:clamp(8px,1.2vw,12px);font-weight:900;color:#fff;background:var(--npc);box-shadow:0 0 0 2px var(--paper)}
+.tok.f{background:#c25a14}
+.tok.me{width:clamp(20px,3.4vw,36px);height:clamp(20px,3.4vw,36px);border-radius:8px;font-family:var(--f-display);font-weight:400;font-size:clamp(11px,1.8vw,18px);box-shadow:0 0 0 2px var(--paper),0 0 0 4px var(--ink),0 3px 6px rgba(0,0,0,.35)}
+.tok.help{outline:2px dashed var(--sel);outline-offset:1px}
+.maphint{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);padding:8px 4px 0}
+.maphint i{display:inline-block;width:12px;height:12px;vertical-align:-2px;margin-right:4px;border-radius:50%}
+
+.side{display:grid;gap:12px}
+.clock{background:var(--ink);color:var(--paper);border-radius:14px;padding:14px 16px;display:grid;gap:8px}
+.clock .row{display:flex;align-items:flex-end;gap:10px;justify-content:space-between}
+.clock .min{font-family:var(--f-display);font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.clock .lbl{font-size:12px;opacity:.75;font-weight:700}
+.clock .warn{font-weight:900;font-size:13.5px;text-align:right}
+.clock .warn b{color:var(--warn)}
+.bar{height:8px;border-radius:4px;background:color-mix(in srgb,var(--paper) 20%,transparent);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--warn)}
+.me-card{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;background:var(--paper);border-radius:14px;padding:12px;box-shadow:var(--shadow)}
+.me-card .face{width:44px;height:44px;font-size:22px;border-radius:10px}
+.me-card b{font-size:15px}
+.me-card .rule{display:block;font-weight:700;font-size:13px;color:var(--muted)}
+.me-card .hp{grid-column:1/-1;font-size:13px;font-weight:700;padding:6px 10px;border-radius:8px;background:var(--bg)}
+.me-card .hp.ok{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.me-card .hp.ng{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.acts{display:grid;gap:8px}
+.acts .tipline{font-size:13px;color:var(--muted);font-weight:700}
+.feed{font-size:12.5px;color:var(--muted);display:grid;gap:3px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:999px;font-weight:700;font-size:14px;z-index:60;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+
+/* ---------- modal ---------- */
+.ov{position:fixed;inset:0;background:rgba(10,18,22,.55);display:grid;place-items:center;z-index:50;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.card{width:min(480px,100%);max-height:100%;overflow:auto;background:var(--paper);border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.35);animation:pop .25s ease}
+@keyframes pop{from{transform:translateY(10px) scale(.98);opacity:.6}to{transform:none;opacity:1}}
+.card .strip{padding:9px 18px;font-weight:900;font-size:12px;letter-spacing:.12em;background:var(--ink);color:var(--paper)}
+.card.red .strip{background:var(--bad);color:#fff}
+.card.yel .strip{background:var(--warn);color:#2a1f00}
+.card.grn .strip{background:var(--sign);color:var(--sign-ink)}
+.card .in{padding:16px 20px 20px;display:grid;gap:12px}
+.card h2{font-size:24px}
+.card p{margin:0}
+.card .fact{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px}
+.card .face{width:64px;height:64px;font-size:32px;border-radius:14px}
+.garble{font-size:20px;letter-spacing:.08em;font-weight:900;word-break:break-all}
+.btns{display:grid;gap:8px}
+.dice{display:flex;gap:14px;justify-content:center}
+.die{width:72px;height:72px;border-radius:14px;background:var(--paper);box-shadow:inset 0 0 0 3px var(--ink);display:grid;place-items:center;font-family:var(--f-display);font-size:38px}
+.big{font-family:var(--f-display);font-size:48px;text-align:center;line-height:1.05}
+.big small{font-size:20px}
+.verdict{font-family:var(--f-display);font-size:24px;text-align:center}
+.v-safe{color:var(--good)}.v-lost{color:var(--bad)}
+
+/* ---------- summary ---------- */
+.summary{display:grid;gap:16px}
+.banner{background:var(--ink);color:var(--paper);border-radius:16px;padding:20px 22px;display:grid;gap:8px}
+.banner h2{font-size:clamp(24px,3.6vw,36px)}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.rcard{background:var(--paper);border-radius:14px;padding:14px;box-shadow:var(--shadow);display:grid;gap:8px;align-content:start}
+.rcard .top{display:flex;gap:10px;align-items:center}
+.rcard .face{width:36px;height:36px;font-size:17px;border-radius:8px;flex:none}
+.rcard ul{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:13.5px}
+.rcard li{display:grid;grid-template-columns:52px minmax(0,1fr);gap:6px}
+.rcard li span{font-size:11px;font-weight:900;color:var(--muted);padding-top:2px}
+.facts,.qs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.facts div,.qs div{background:var(--paper);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+.facts b{font-family:var(--f-display);font-weight:400;font-size:28px;color:var(--bad);display:block;line-height:1.1}
+.facts small{display:block;color:var(--muted);font-size:11.5px;margin-top:4px}
+.qs div{font-weight:700}
+.qs span{display:block;font-family:var(--f-display);font-weight:400;color:var(--sign);font-size:13px}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap}
+.guide{display:grid;gap:10px;font-size:14px}
+.guide h3{font-size:15px}
+.guide ul,.guide ol{margin:0;padding-left:1.3em}
+.guide code{font-size:13px;background:var(--bg);padding:1px 6px;border-radius:4px;user-select:all}
+@media (max-width:980px){.chars{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:900px){.play{grid-template-columns:minmax(0,1fr)}.regions{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:640px){.facts,.qs{grid-template-columns:minmax(0,1fr)}.map{gap:2px}.mapbox{padding:6px}}
+@media (max-width:420px){.chars{grid-template-columns:minmax(0,1fr)}}
+@media (prefers-reduced-motion:reduce){.card{animation:none}.t-fire{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <div class="logo">
+      <svg width="38" height="38" viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="6" fill="currentColor" opacity=".18"/><circle cx="24" cy="9" r="3.6" fill="currentColor"/><path d="M22 14l-6 5 3 2 3-2 1 6-5 7 3 2 5-7 3 3 1 6h3l-1-8-4-4-1-6 4 3h5v-3h-4z" fill="currentColor"/></svg>
+      <div><small>誰一人取り残さない防災 ／ 事前学習</small><h1>3つの町の12人</h1></div>
+    </div>
+    <div class="sp"></div>
+    <button class="tb" type="button" id="bRule">あそびかた</button>
+    <button class="tb" type="button" id="bGuide">運営者ガイド</button>
+  </header>
+  <main id="vRegion" class="select"></main>
+  <main id="vSelect" class="select" hidden></main>
+  <main id="vPlay" class="play" hidden>
+    <section class="mapbox">
+      <div class="map" id="map"></div>
+      <div class="maphint" id="maphint"></div>
+    </section>
+    <aside class="side" id="side"></aside>
+  </main>
+  <main id="vSum" class="summary" hidden></main>
+</div>
+<div class="ov" id="ov" hidden><div class="card" id="card" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const GARBLE='■■■■■ ■■■ ■■■■■■■。■■ ■■■■■■■■！';
+const SRC_M='みなと浜市 地域分析資料（架空設定）', SRC_A='青葉みらい市 地域分析資料（架空設定）', SRC_Y='やまびこ町 地域分析資料（架空設定）';
+
+/* ====================== 3つの地域 ====================== */
+const REG={
+/* ---------- 青葉みらい市 ---------- */
+aoba:{name:'青葉みらい市',type:'都市部 × 直下地震',col:'#e4572e',hazard:'fire',
+  scene:'冬の平日17時30分。直下地震で最大震度7。鉄道停止・停電・市街地火災が同時に起きた。',
+  start:17*60+30,unit:5,T:[10,11],fog:0,goalWord:'避難場所',
+  rows:["GG.waaw.TT","GG.wwww.TT","...waaw...","J.#...ccc.","..#.#.ccc.","II...#..FF","II.#....FF"],
+  tiles:{
+    '.':{cls:''},'#':{cls:'t-bldg2',block:1},
+    w:{cls:'t-alley',flam:1,hz:1,n:'木造密集（延焼の危険）',lab:'first'},
+    a:{cls:'t-wh',block:1,flam:1},
+    c:{cls:'t-crowd',crowd:1,n:'中央駅（帰宅困難者）',lab:'first'},
+    G:{cls:'t-park',site:{n:'総合体育館・広域避難場所',nNo:'総合体育館',safe:1}},
+    J:{cls:'t-site',site:{n:'青葉第一中学校',safe:1}},
+    I:{cls:'t-site',site:{n:'国際交流会館',safe:1,sign:1}},
+    F:{cls:'t-site',site:{n:'青葉福祉センター',safe:1}},
+    T:{cls:'t-tower',site:{n:'みらいタワー',lock:1,tower:1}}
+  },
+  npcGoal:['G','J','F','I'],
+  npcs:[{nm:'近所の人',ini:'近',x:3,y:0},{nm:'近所の人',ini:'近',x:6,y:0},{nm:'駅員',ini:'駅',x:6,y:4},{id:'tw',nm:'同じ階の住人',ini:'住',x:8,y:1,mode:'tower'}],
+  fireman:{x:2,y:2,at:3,p:.3,msg:'消防団員が来た（火災対応で手いっぱい）'},
+  info:'東青葉で延焼中',hmStat:'青葉みらい市では、ハザードマップの存在を知る人76%、実際に見た人62%、避難先・経路を決めている人34%',
+  facts:[['42%','6時間以内に安否確認できる要支援者（現状）',SRC_A],['4,900人','個別避難計画で支援者が決まっていない人',SRC_A],['約430人','実際に動ける消防団員（登録860人）',SRC_A]],
+  chars:{
+    old:{name:'トメさん',age:81,ini:'ト',col:'#b0306a',role:'東青葉の一人暮らし高齢者',start:[4,1],speed:1,hm:0,f:{slow:1},
+      rule:'足が弱い：1マス10分',intro:'木造住宅が密集する東青葉の自宅で発災。すぐ近くで火の手が上がった。道は狭く、ブロック塀も多い。',
+      fact:['4,900人','個別避難計画で支援者が決まっていない人',SRC_A]},
+    tower:{name:'ミナトさん',age:70,ini:'ミ',col:'#0f7c7a',role:'タワー25階の在宅医療利用者',start:[8,1],speed:1,hm:1,f:{tower:25,batt:8},
+      rule:'エレベーター停止。医療機器の電池はあと40分',intro:'みらいタワー25階で発災。停電でエレベーターが止まり、医療機器はバッテリーで動いている。電源のある避難場所まで行かないと危ない。',
+      fact:['310台','市のポータブル電源。医療機器の利用者約1,100人に足りない',SRC_A]},
+    stu:{name:'リさん',age:22,ini:'リ',col:'#6b46a8',role:'留学生（中央駅で帰宅途中）',start:[7,4],speed:2,hm:0,f:{lang:1,app:'congest'},
+      rule:'日本語の放送・看板がわからない',intro:'中央駅で帰宅途中に発災。電車は止まり、駅前は人であふれている。日本語の放送はわからない。',
+      fact:['62人','発災時に動ける通訳（登録126人。英中韓に偏る）',SRC_A]},
+    deaf:{name:'カナさん',age:45,ini:'カ',col:'#a8641c',role:'聴覚障害のある人',start:[6,2],speed:2,hm:1,f:{deaf:1,app:'congest'},
+      rule:'耳が聞こえない：放送も呼びかけも届かない',intro:'東青葉の近くで発災。サイレンも放送も、周りの声も聞こえない。助けを呼べるのは、目の前の人だけ。',
+      fact:['42%','6時間以内に安否確認できる要支援者（現状）',SRC_A]}
+  },
+  events:{
+    0:()=>{S.map[0][6]='*'},
+    1:async()=>{await say('1','防災無線','「東青葉地区で火災が発生。広域避難場所（青葉総合体育館）へ避難してください」')},
+    2:async()=>{const c=randOf(cellsOf('c')); let hit=false; if(c){S.map[c[1]][c[0]]='X'; if(S.x===c[0]&&S.y===c[1]) hit=true}
+      dropWall(['.','w']); render();
+      await modalP({cls:'red',strip:tl(),title:'余震',body:'<p>駅前でガラスや看板が落ちてきた。倒れた塀で道もふさがった。</p>'+(hit?'<p><b>あなたは巻きこまれた。</b></p>':''),btns:[{l:'OK',c:'dark'}]});
+      if(hit) lose('落ちてきたガラスでけがをした')},
+    5:async()=>{const c=randOf([...cellsOf('a'),...cellsOf('w')].sort((p,q)=>dist(p)-dist(q)).slice(0,4)); if(c){S.map[c[1]][c[0]]='*'; if(S.x===c[0]&&S.y===c[1]) lose('火に巻きこまれた')}
+      render(); await modalP({cls:'red',strip:tl(),title:'火の粉が飛んだ',body:'<p>強い風で、離れた場所にも火がついた。</p>',btns:[{l:'OK',c:'dark'}]})},
+    7:async()=>{await say('7','SNSの投稿','「青葉第一中学校はもう満員らしい」（だれが書いたかわからない情報）')},
+    8:async()=>{toast(S.info?'火の勢いが強くなっている！':'煙がどんどん近づいてくる…')}
+  },
+  tick:()=>{const add=[]; for(const [x,y] of cellsOf('*')) for(const [nx,ny] of nb(x,y)){const t=TD(tileAt(nx,ny)); if(t&&t.flam&&Math.random()<.45) add.push([nx,ny])}
+    add.forEach(([x,y])=>{S.map[y][x]='*'; if(x===S.x&&y===S.y) lose('火に巻きこまれた')})},
+  endTitle:'火の勢いが最大に',
+  qs:['いちばん逃げにくかったのは誰？ なぜ？','放送や呼びかけが届かなかった人に、ほかの方法で情報を届けるには？','タワーの住民や帰宅困難者を、誰が把握する？']
+},
+/* ---------- みなと浜市 ---------- */
+minato:{name:'みなと浜市',type:'沿岸部 × 地震・津波',col:'#3d7fc4',hazard:'tsunami',
+  scene:'夏休みの日曜日14時。海溝型巨大地震で最大震度6強。最大12mの津波が最短18分で来る。',
+  start:14*60,unit:2,T:[9,10],fog:0,goalWord:'避難場所',
+  rows:["KKK#....#.","KKK#.#....","......h.#.","#A.#....PP","...#B.#V.P","==========","~~~~~~~~~~"],
+  tiles:{
+    '.':{cls:''},'#':{cls:'t-house',block:1},
+    '=':{cls:'t-eq',n:'海岸・防潮堤',lab:'x0'},'~':{cls:'t-sea',block:1,n:'海',lab:'x0'},
+    P:{cls:'t-port',n:'中央港',lab:'first'},
+    K:{cls:'t-hill',slope:1,site:{n:'岬丘（高台）',h:30,safe:1,slope:1}},
+    h:{cls:'t-site',site:{n:'ホテル避難ビル',h:32,safe:1,stairs:1}},
+    A:{cls:'t-site',site:{n:'潮見タワーA',h:18,safe:1,stairs:1}},
+    B:{cls:'t-site',site:{n:'潮見タワーB',h:15,safe:1,stairs:1,maybeLock:.5}},
+    V:{cls:'t-site',site:{n:'海浜観光センター',h:10,safe:1,stairs:1,sign:1}}
+  },
+  npcGoal:['K','h','A'],
+  npcs:[{nm:'近所の人',ini:'近',x:2,y:3},{nm:'監視員',ini:'監',x:7,y:5},{nm:'ホテル従業員',ini:'従',x:6,y:3}],
+  fireman:{x:4,y:2,at:3,p:.4,msg:'消防団員が誘導に来た'},
+  info:'予想 最大12m<br>到達 最短18分',eta:9,hmStat:'みなと浜市では、ハザードマップの存在を知る人84%、実際に見た人72%、浸水深を説明できる人51%',
+  facts:[['52%','強い揺れから5分以内に避難を始める人（現状）',SRC_M],['27施設','津波避難ビル。休日・夜間の鍵と管理者が課題',SRC_M],['約290人','休日に動ける消防団員（登録520人）',SRC_M]],
+  chars:{
+    old:{name:'シオさん',age:84,ini:'シ',col:'#b0306a',role:'潮見住宅の一人暮らし高齢者',start:[0,4],speed:1,hm:1,f:{slow:1,stairsHelp:1},
+      rule:'足が弱い：1マス4分。階段は介助が必要',intro:'潮見住宅の自宅で発災。津波タワーはすぐ近くにあるが、階段をひとりで上がれない。',
+      fact:['38%','津波到達（18分）までに安全を確保できる要支援者（現状）',SRC_M]},
+    wheel:{name:'ナギさん',age:38,ini:'ナ',col:'#0f7c7a',role:'潮見住宅の車いす利用者',start:[2,4],speed:2,hm:1,f:{stairsHelp:1,slopeHelp:1},
+      rule:'階段・急な坂は介助が必要',intro:'タワーの場所は知っている。でもエレベーターはなく、誰に階段を手伝ってもらうか決めていない。',
+      fact:['1,450人','支援者が決まっていない要支援者（沿岸部に集中）',SRC_M]},
+    tour:{name:'アレックスさん',age:27,ini:'ア',col:'#6b46a8',role:'外国人観光客（海水浴中）',start:[8,5],speed:2,hm:0,f:{lang:1,app:'none'},
+      rule:'日本語がわからない。スマホはホテルの部屋',intro:'海水浴中に発災。日本語の放送はわからない。スマホはホテルに置いてきた。多言語の看板があれば…',
+      fact:['35%','観光客に多言語の避難誘導が届く割合（現状）',SRC_M]},
+    baby:{name:'ハルさん',age:32,ini:'ハ',col:'#a8641c',role:'乳幼児連れ（ベビーカー）',start:[6,5],speed:2,hm:0,f:{stroller:1},
+      rule:'ベビーカー：階段の前でたたむのに＋2分',intro:'海水浴場で子どもと遊んでいたら発災。ベビーカーでは階段を上がれない。たたんで抱っこするしかない。',
+      fact:['61%','津波避難施設が5分以内に開く割合（現状）',SRC_M]}
+  },
+  events:{
+    1:async()=>{await say('1','大津波警報','「大津波警報。予想される津波の高さは最大12m。到達は最短18分。すぐに高い場所へ」')},
+    2:async()=>{if(dropWall(['.'])){render(); await modalP({cls:'red',strip:tl(),title:'液状化で道がふさがった',body:'<p>道路が波打ち、通れなくなった。</p>',btns:[{l:'OK',c:'dark'}]})}},
+    3:async()=>{let hit=false; for(const [x,y] of cellsOf('P')){S.map[y][x]='S'; if(x===S.x&&y===S.y) hit=true}
+      render(); await modalP({cls:'red',strip:tl(),title:'港で火災',body:'<p>港湾火災の煙で、港の道が通れなくなった。</p>',btns:[{l:'OK',c:'dark'}]}); if(hit) lose('港の火災の煙に巻かれた')},
+    5:async()=>{S.crowd=1; await modalP({cls:'yel',strip:tl(),title:'入口に人が集中',body:'<p>タワーやビルの階段に人が殺到している。ここから先、階段のある場所に入るのに＋2分かかる。</p>',btns:[{l:'OK',c:'dark'}]})},
+    6:async()=>{await say('6','到達予想の更新','「津波の第1波は、まもなく到達します」')},
+    8:async()=>{toast(S.info?'いつ来てもおかしくない！':'周りの人が、みんな走っていく…')}
+  },
+  endTitle:'津波が来た！',
+  qs:['いちばん逃げにくかったのは誰？ なぜ？','タワーの鍵や階段の問題は、事前に何をしておけば防げた？','観光客や海水浴客に、どうやって避難を伝える？']
+},
+/* ---------- やまびこ町 ---------- */
+yamabiko:{name:'やまびこ町',type:'山間部 × 集中豪雨・土砂災害',col:'#2b4c7e',hazard:'rain',
+  scene:'梅雨末期の午前2時。線状降水帯が停滞し、河川氾濫・土砂崩れ・停電・通信不通が同時に起きた。',
+  start:2*60,unit:10,T:[9,10],fog:2,goalWord:'安全な場所',
+  rows:["Os.s#..ssQ",".s..s.#s..","..s...#.P.","lllllEl.ll","RRbRRRRRbR","ll.l#lll..",".J..F..#.."],
+  tiles:{
+    '.':{cls:''},'#':{cls:'t-house',block:1},
+    s:{cls:'t-slope',slope:1,hz:1,n:'土砂災害警戒区域',lab:'first'},
+    l:{cls:'t-low',hz:1,n:'浸水想定',lab:'first'},
+    R:{cls:'t-river',block:1,n:'川',lab:'x0'},
+    b:{cls:'t-bridgeh',n:'橋',lab:'all'},
+    O:{cls:'t-site',site:{n:'奥峰集会所',safe:1}},
+    Q:{cls:'t-site',site:{n:'高原体育館',safe:1}},
+    P:{cls:'t-site',site:{n:'杉ノ沢公民館',nHm:'杉ノ沢公民館（土砂区域の近く）',safe:1}},
+    E:{cls:'t-site',site:{n:'川原谷小学校',nHm:'川原谷小学校（浸水想定）',safe:1,low:1}},
+    J:{cls:'t-site',site:{n:'やまびこ中学校',safe:1}},
+    F:{cls:'t-site',site:{n:'町福祉センター',safe:1}}
+  },
+  npcGoal:['O','Q','J','F'],
+  npcs:[{nm:'となりの人',ini:'と',x:3,y:1},{nm:'川原谷の住民',ini:'住',x:4,y:3},{nm:'寮の先輩',ini:'先',x:9,y:2}],
+  fireman:{x:2,y:5,at:3,p:.4,msg:'消防団員が見回りに来た'},
+  info:'土砂災害警戒情報<br>川が氾濫のおそれ',hmStat:'やまびこ町では、ハザードマップの存在を知る人73%、実際に見た人61%、自宅のリスクを説明できる人46%',
+  facts:[['43%','孤立のおそれのある集落の状況を3時間以内に把握できる割合（現状）',SRC_Y],['54%','高齢者等避難から1時間以内に連絡が届く割合（現状）',SRC_Y],['約170人','夜間に動ける消防団員（登録286人）',SRC_Y]],
+  chars:{
+    old:{name:'イネさん',age:86,ini:'イ',col:'#b0306a',role:'奥峰の一人暮らし高齢者',start:[2,1],speed:1,hm:1,f:{slow:1,noSignal:1,home2F:1,noInfo:'rain'},
+      rule:'足が弱い：1マス20分。携帯は圏外',intro:'奥峰の自宅で、夜中に目が覚めた。雨音で防災無線も聞き取れない。裏は急な斜面。集会所までの道も崩れそうで怖い。',
+      fact:['214世帯','民生委員1人あたりの担当（山道の移動つき）',SRC_Y]},
+    wheel:{name:'ユウさん',age:41,ini:'ユ',col:'#0f7c7a',role:'川原谷の車いす利用者',start:[3,3],speed:2,hm:1,f:{slopeHelp:1},
+      rule:'ぬかるんだ斜面（土砂区域）は通れない',intro:'川沿いの川原谷で発災。中心地区へ行くには橋を渡るしかない。家の前の道は、浸水のおそれがある。',
+      fact:['11台分','夜間に運転手を確保できる福祉車両',SRC_Y]},
+    trn:{name:'ドゥックさん',age:24,ini:'ド',col:'#6b46a8',role:'杉ノ沢の技能実習生',start:[7,2],speed:2,hm:0,f:{lang:1,app:'ok'},
+      rule:'日本語の放送・看板がわからない',intro:'杉ノ沢の寮で目が覚めた。放送は聞こえるが、どれくらい危ないのか、いつ動くべきかわからない。',
+      fact:['約5人','夜間に動ける通訳・外国人支援（登録12人）',SRC_Y]},
+    camp:{name:'サトウさん一家',age:null,ini:'サ',col:'#a8641c',role:'キャンプ客（土地勘なし）',start:[6,3],speed:3,hm:0,f:{car:1,lang:'camp',app:'infoOnly',noInfo:'camp'},
+      rule:'車で3マス進める。土地勘がなく、町の通知も来ない',intro:'川沿いのキャンプ場で、夜中に雨が強まった。町の防災メールには登録していない。どこに避難所があるかも知らない。',
+      fact:['把握外','キャンプ場・日帰り客の人数（観光事業者連絡会）',SRC_Y]}
+  },
+  events:{
+    1:async()=>{await say('1','防災無線','「土砂災害警戒情報が発表されました。川原谷地区に緊急安全確保。ただちに命を守る行動を」')},
+    2:async()=>{await slide('斜面が崩れた')},
+    3:async()=>{flood(.5); render(); await modalP({cls:'red',strip:tl(),title:'川があふれはじめた',body:'<p>川沿いの低い道に水があふれてきた。</p>',btns:[{l:'OK',c:'dark'}]})},
+    4:async()=>{let hit=S.x===2&&S.y===4; S.map[4][2]='R'; render(); await modalP({cls:'red',strip:tl(),title:'橋が通行止め',body:'<p>増水で、西の橋が渡れなくなった。</p>',btns:[{l:'OK',c:'dark'}]}); if(hit) lose('橋の上で増水に巻きこまれた')},
+    5:async()=>{await slide('また斜面が崩れた')},
+    6:async()=>{flood(1); if(S.cid==='old'&&!isHomeHit()&&Math.random()<.4){S.map[S.home[1]][S.home[0]]='X'; if(S.x===S.home[0]&&S.y===S.home[1]) lose('家の裏山が崩れた')}
+      render(); await modalP({cls:'red',strip:tl(),title:'川が氾濫した',body:'<p>浸水想定の場所が、すべて水につかった。</p>',btns:[{l:'OK',c:'dark'}]})},
+    7:async()=>{if(Math.random()<.4){const p=cellsOf('P')[0]; if(p){S.map[p[1]][p[0]]='X'; if(S.x===p[0]&&S.y===p[1]) lose('避難先の公民館の裏山が崩れた'); render();
+      await modalP({cls:'red',strip:tl(),title:'公民館の裏山が崩れた',body:'<p>杉ノ沢公民館が土砂にのまれた。</p>',btns:[{l:'OK',c:'dark'}]})}}},
+    8:async()=>{toast('雨がさらに強まっている…')}
+  },
+  endTitle:'夜が明けた',
+  qs:['いちばん逃げにくかったのは誰？ なぜ？','夜・圏外・豪雨の中で、情報や助けを届けるには？','避難所そのものが危ない場所だったら、どうする？']
+}};
+const ORDER=['aoba','minato','yamabiko'];
+const DYN={X:{cls:'t-X',block:1,n:'がれき・土砂',lab:'all'},'*':{cls:'t-fire',block:1},W:{cls:'t-flood',block:1},S:{cls:'t-smoke',block:1,n:'煙',lab:'all'}};
+
+/* ====================== 状態 ====================== */
+let APP={res:{}}, R=null, RID=null, S=null, busy=false;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const rnd=n=>Math.floor(Math.random()*n);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const randOf=a=>a.length?a[rnd(a.length)]:null;
+function save(){try{localStorage.setItem('3towns',JSON.stringify(APP))}catch(e){}}
+function loadApp(){try{const s=localStorage.getItem('3towns');const a=s&&JSON.parse(s);return a&&a.res?a:null}catch(e){return null}}
+const C=()=>R.chars[S.cid], F=()=>C().f;
+const tileAt=(x,y)=>S.map[y]&&S.map[y][x];
+const TD=c=>c==null?null:(DYN[c]||R.tiles[c]||{cls:''});
+const siteOf=c=>{const t=TD(c);return t&&t.site};
+const nb=(x,y)=>[[x+1,y],[x-1,y],[x,y+1],[x,y-1]].filter(([a,b])=>a>=0&&b>=0&&a<10&&b<7);
+const cellsOf=ch=>{const o=[];for(let y=0;y<7;y++)for(let x=0;x<10;x++) if(S.map[y][x]===ch) o.push([x,y]);return o};
+const dist=([x,y])=>Math.abs(x-S.x)+Math.abs(y-S.y);
+const helper=()=>S.npcs.find(n=>n.mode==='with');
+const tl=()=>{const m=R.start+S.t*R.unit;return `${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`};
+const log=(ph,t)=>{if(!S.log.some(l=>l.t===t)) S.log.push({ph,t})};
+const feed=t=>{S.feed.unshift(t);S.feed=S.feed.slice(0,3)};
+const lose=why=>{if(!S.lostWhy){S.lostWhy=why}};
+const siteName=s=>S.hm?(s.nHm||s.n):(s.nNo||s.n);
+const isHomeHit=()=>tileAt(S.home[0],S.home[1])==='X';
+
+/* ====================== 移動ルール ====================== */
+function locked(c){const s=siteOf(c);if(!s) return false;if(s.tower) return S.cid!=='tower';return !!S.lockB&&c==='B'}
+function canEnter(c,through){
+  const t=TD(c); if(!t||t.block) return false;
+  const f=F(), h=!!helper();
+  if(locked(c)&&S.lockKnown[c]) return false;
+  if(f.car&&(t.slope||t.crowd)) return false;
+  if(t.slope&&f.slopeHelp&&!h) return false;
+  const s=t.site;
+  if(s&&s.stairs&&f.stairsHelp&&!h) return false;
+  if(through&&locked(c)) return false;
+  return true;
+}
+function mySpeed(){const f=F(),h=!!helper();if(f.slow) return 1; if(f.tower) return h?2:1; return C().speed}
+function myCost(){return F().slow&&!helper()?2:1}
+function myReach(){
+  if(F().tower&&S.floors>0) return [];
+  const sp=mySpeed(); const seen=new Set([S.x+','+S.y]); let fr=[[S.x,S.y]]; const out=[];
+  for(let d=1;d<=sp;d++){const nf=[];
+    for(const [x,y] of fr) for(const [nx,ny] of nb(x,y)){const k=nx+','+ny; if(seen.has(k)) continue; const c=tileAt(nx,ny);
+      if(!canEnter(c,false)) continue; seen.add(k); out.push([nx,ny]); if(!locked(c)&&!siteOf(c)?.stairs) nf.push([nx,ny]); else if(!locked(c)) nf.push([nx,ny]);}
+    fr=nf;}
+  return out;
+}
+function npcPass(c){const t=TD(c);return t&&!t.block&&!locked(c)}
+function path(sx,sy,goal){
+  const prev=new Map([[sx+','+sy,null]]); const q=[[sx,sy]];
+  while(q.length){const [x,y]=q.shift(); if(goal(x,y)){const p=[];let k=x+','+y;while(k){p.unshift(k.split(',').map(Number));k=prev.get(k)}return p}
+    for(const [nx,ny] of nb(x,y)){const k=nx+','+ny;if(prev.has(k))continue;if(!npcPass(tileAt(nx,ny)))continue;prev.set(k,x+','+y);q.push([nx,ny])}}
+  return null;
+}
+const npcGoal=(x,y)=>R.npcGoal.includes(tileAt(x,y));
+
+/* ====================== 災害の進行 ====================== */
+function dropWall(kinds){
+  const cand=[];for(let y=0;y<7;y++)for(let x=0;x<10;x++) if(kinds.includes(S.map[y][x])&&!(x===S.x&&y===S.y)&&!S.npcs.some(n=>n.x===x&&n.y===y)&&dist([x,y])<=4&&dist([x,y])>=1) cand.push([x,y]);
+  if(!cand.length) return false; cand.sort((a,b)=>dist(a)-dist(b));
+  const [x,y]=cand[rnd(Math.min(3,cand.length))]; S.map[y][x]='X'; log('中','倒れた塀やがれきで道がふさがれた'); return true;
+}
+async function slide(title){
+  const s=cellsOf('s'); if(!s.length) return; const near=s.sort((a,b)=>dist(a)-dist(b)).slice(0,4); const [x,y]=randOf(near);
+  S.map[y][x]='X'; const hit=x===S.x&&y===S.y; render();
+  await modalP({cls:'red',strip:tl(),title,body:'<p>土砂災害警戒区域の斜面が崩れ、道がふさがった。</p>'+(hit?'<p><b>あなたは巻きこまれた。</b></p>':''),btns:[{l:'OK',c:'dark'}]});
+  if(hit) lose('土砂崩れに巻きこまれた');
+}
+function flood(p){
+  for(const ch of ['l','E']) for(const [x,y] of cellsOf(ch)){ if(p<1&&ch==='E') continue; if(Math.random()<p){S.map[y][x]='W'; if(x===S.x&&y===S.y){ if(S.home2F&&x===S.home[0]&&y===S.home[1]) continue; lose('水かさが増して、流された')}}}
+}
+
+/* ====================== ステージ ====================== */
+function startStage(cid){
+  const c=R.chars[cid]; const [x,y]=c.start;
+  S={cid,t:0,T:R.T[0]+rnd(R.T[1]-R.T[0]+1),map:R.rows.map(r=>r.split('')),x,y,home:[x,y],
+    info:!(c.f.lang||c.f.deaf||c.f.noInfo), labels:!c.f.lang, pointed:false, lockB:Math.random()<.5, lockKnown:{},
+    hm:!!c.hm, floors:c.f.tower||0, batt:c.f.batt||0, crowd:0, home2F:false, moved:false, calls:0, log:[], feed:[], over:false, lostWhy:null,
+    npcs:R.npcs.map(n=>({id:n.id||Math.random().toString(36).slice(2,7),mode:n.mode||'go',...n})).concat([{id:'f',nm:'消防団員',ini:'消',x:R.fireman.x,y:R.fireman.y,mode:'off'}])};
+  if(cid!=='tower') S.npcs=S.npcs.filter(n=>n.mode!=='tower');
+  if(R.events[0]) R.events[0]();
+  view('play'); renderHint(); render();
+  modal({cls:'red',strip:`${tl()} ― 発災`,title:`あなたは${c.name}${c.age?`（${c.age}）`:''}`,body:`<div class="face" style="background:${c.col}">${c.ini}</div><p>${c.intro}</p>${hmChip(c.hm)}<p class="fact">${c.hm?'地図に、危ない場所'+(R.hazard==='tsunami'?'や避難場所の高さ':'')+'が表示されている。':'地図には、危ない場所'+(R.hazard==='tsunami'?'も避難場所の高さ':'')+'も表示されない。'}</p>`,btns:[{l:'スタート',c:'go'}]});
+}
+async function passTime(k){
+  for(let i=0;i<k;i++){
+    S.t++; npcStep(); if(R.tick) R.tick(); joinCheck(); battTick(); render();
+    const ev=R.events[S.t]; if(ev&&!S.lostWhy) await ev();
+    if(S.t===R.fireman.at){const f=S.npcs.find(n=>n.id==='f'); if(f){f.mode='wait'; toast(S.info?R.fireman.msg:'制服の人が来た'); feed(S.info?R.fireman.msg:'制服の人が来た')}}
+    if(S.lostWhy||S.t>=S.T){await ending(); return true}
+  }
+  render(); return false;
+}
+function battTick(){
+  if(!F().batt||S.charged) return;
+  const s=siteOf(tileAt(S.x,S.y)); if(s&&s.safe&&!s.tower&&S.floors===0){S.charged=true;toast('電源につながった！');log('中','電源のある避難場所にたどり着いた');return}
+  S.batt--; if(S.batt<=0) lose('医療機器の電池が切れた');
+}
+function npcStep(){
+  for(const n of S.npcs){
+    if(n.mode==='go'){ if(npcGoal(n.x,n.y)){n.mode='safe';continue} const p=path(n.x,n.y,npcGoal); if(p){const s=p[Math.min(2,p.length-1)];n.x=s[0];n.y=s[1]} if(npcGoal(n.x,n.y)) n.mode='safe'; }
+    else if(n.mode==='help'){ const p=path(n.x,n.y,(x,y)=>x===S.x&&y===S.y); if(p){const s=p[Math.min(2,p.length-1)];n.x=s[0];n.y=s[1]} else {n.mode='go';feed(`${n.nm}は、ここまで来られなかった`)} }
+    else if(n.mode==='with'){n.x=S.x;n.y=S.y}
+  }
+}
+function joinCheck(){
+  const n=S.npcs.find(n=>n.mode==='help'&&n.x===S.x&&n.y===S.y); if(!n) return;
+  n.mode='with'; toast(`${n.nm}が付き添ってくれる！`); feed(`${n.nm}が付き添ってくれた`);
+  log(S.moved?'中':'前',`${S.t*R.unit}分後、${n.nm}が付き添ってくれた`);
+  if(!S.labels&&F().lang!=='camp') point(`${n.nm}が、行くべき方向を指さした`);
+}
+function point(msg){S.pointed=true;toast(msg);feed(msg)}
+function learn(how,full){S.info=true;if(full)S.labels=true;log('前',`状況がわかるまで${S.t*R.unit}分かかった`);toast(how);render()}
+function checkSign(){ if(S.info&&S.labels) return; for(const [x,y] of [[S.x,S.y],...nb(S.x,S.y)]){const s=siteOf(tileAt(x,y)); if(s&&s.sign&&F().lang){learn('多言語の案内で、状況と避難場所がわかった',true);return}} }
+
+/* ====================== 行動 ====================== */
+async function moveTo(x,y){
+  if(busy) return; busy=true;
+  const c=tileAt(x,y); let cost=myCost(); const t=TD(c); const s=t.site;
+  if(!S.moved){S.moved=true; log('前',`動き出したのは発災から${S.t*R.unit}分後`)}
+  if(locked(c)){
+    S.lockKnown[c]=1;
+    const why=s.tower?'オートロックで中に入れなかった':'津波避難タワーの入口にカギがかかっていた';
+    log('中',why); render();
+    await modalP({cls:'red',strip:tl(),title:'入口が開かない！',body:`<p>${why}。時間をムダにした。</p>`,btns:[{l:'OK',c:'dark'}]});
+  } else {
+    S.x=x;S.y=y; const h=helper(); if(h){h.x=x;h.y=y}
+    if(t.crowd){cost++; log('中','人であふれていて、なかなか進めなかった')}
+    if(s&&s.stairs&&F().stroller){cost++; log('中','階段の前でベビーカーをたたむのに時間がかかった')}
+    if(s&&s.stairs&&S.crowd){cost++; log('中','入口と階段に人が集中していた')}
+    if(F().slow&&!helper()) log('中',`ひとりだと1マス進むのに${R.unit*2}分かかった`);
+    joinCheck(); checkSign();
+    if(s&&s.safe&&S.labels) toast(`${s.n}に着いた`);
+  }
+  await passTime(cost);
+  busy=false; if(!S.over) render();
+}
+async function act(kind){
+  if(busy) return; busy=true;
+  let cost=1; const f=F();
+  if(kind==='call'){
+    S.calls++;
+    const range=(f.noSignal||f.deaf)?1:(S.floors>0?99:5);
+    let cands=S.npcs.filter(n=>(n.mode==='go'||(n.id==='f'&&n.mode==='wait')||(n.mode==='tower'&&S.floors>0))&&(n.mode==='tower'||Math.abs(n.x-S.x)+Math.abs(n.y-S.y)<=range));
+    if(S.floors>0) cands=cands.filter(n=>n.mode==='tower');
+    cands.sort((a,b)=>(Math.abs(a.x-S.x)+Math.abs(a.y-S.y))-(Math.abs(b.x-S.x)+Math.abs(b.y-S.y)));
+    let got=null;
+    for(const n of cands){const p=n.id==='f'?R.fireman.p:n.mode==='tower'?.35:(f.lang?.2:.4); if(Math.random()<p){got=n;break}}
+    if(got){ if(got.mode==='tower'){got.mode='with';toast(`${got.nm}が手を貸してくれる！`);log('前',`${S.t*R.unit}分後、${got.nm}が手を貸してくれた`)}
+      else {got.mode='help';toast(`${got.nm}が気づいた！ 向かってくれる`);feed(`${got.nm}が気づいた`)} }
+    else {toast(f.deaf?'身ぶりに気づいてもらえなかった…':f.noSignal&&!cands.length?'圏外で、近くにも誰もいない…':'声が届かなかった…');feed('助けを求めたが、届かなかった');log(S.moved?'中':'前',f.noSignal?'圏外で、助けを呼べなかった':f.deaf?'身ぶりで助けを求めたが、気づいてもらえなかった':'助けを呼んだが、届かなかった')}
+  }
+  if(kind==='ask') point('となりの人は、ある方向を指さして走っていった');
+  if(kind==='app'){
+    if(f.app==='congest'){ if(Math.random()<.5) learn(f.deaf?'スマホの文字情報で、状況がわかった':'翻訳アプリで、状況がわかった',true); else {toast('回線が混雑していて、つながらない…');feed('スマホがつながらなかった');log('前','回線が混雑して、スマホで情報を得られなかった')} }
+    else if(f.app==='infoOnly'){ learn('天気アプリで、警報が出ていると知った',false) }
+    else learn('翻訳アプリで、状況がわかった',true);
+  }
+  if(kind==='down'){ const step=helper()?10:5; S.floors=Math.max(0,S.floors-step); feed(`階段を降りた（あと${S.floors}階）`); if(S.floors===0){toast('1階に着いた');log('中',`25階から降りるのに${(S.t+1)*R.unit}分かかった`)} }
+  if(kind==='home2F'){ S.home2F=true; log('中','自宅の2階で過ごすことにした（垂直避難）'); cost=Math.max(1,S.T-S.t) }
+  if(kind==='stay'){ cost=Math.max(1,S.T-S.t) }
+  await passTime(cost);
+  busy=false; if(!S.over) render();
+}
+
+/* ====================== 結末 ====================== */
+async function ending(){
+  S.over=true; render(); let safe=false, why=S.lostWhy||'';
+  if(S.lostWhy){
+    await modalP({cls:'red',strip:tl(),title:'ここまで…',body:`<p>${esc(why)}。</p>`,btns:[{l:'つづける',c:'dark'}]});
+  } else if(R.hazard==='tsunami'){
+    await new Promise(res=>modal({cls:'red',strip:tl(),title:'津波が来た！',body:`<p>サイコロ2つで津波の高さが決まる（最大12m）。</p><div class="dice"><div class="die" id="d1">?</div><div class="die" id="d2">?</div></div><div id="hres"></div>`,
+      btns:[{l:'サイコロをふる',c:'red',keep:true,fn:async b=>{
+        b.disabled=true; let a=1,c=1; for(let i=0;i<14;i++){a=1+rnd(6);c=1+rnd(6);$('#d1').textContent=a;$('#d2').textContent=c;await sleep(60+i*12)}
+        S.H=a+c; const s=siteOf(tileAt(S.x,S.y));
+        safe=!!(s&&s.safe&&s.h>S.H); why=safe?'':(s&&s.h?`${s.n}（${s.h}m）より高い津波が来た`:'高い場所に間に合わなかった');
+        render();
+        $('#hres').innerHTML=`<div class="big" style="color:var(--bad)">${S.H}<small>m</small></div><div class="verdict ${safe?'v-safe':'v-lost'}">${safe?`${s.n}（${s.h}m）で助かった`:esc(why)}</div>`;
+        b.textContent='つづける'; b.className='btn dark'; b.disabled=false; b.onclick=()=>{closeModal();res()}; b.focus();
+      }}]}));
+  } else {
+    const s=siteOf(tileAt(S.x,S.y)); const home=S.home2F&&S.x===S.home[0]&&S.y===S.home[1]&&!isHomeHit();
+    safe=!!(s&&s.safe&&!s.tower)||home;
+    if(F().batt&&!S.charged) safe=false;
+    why=safe?'':F().batt?'電源のある避難場所にたどり着けなかった':`${R.goalWord}にたどり着けなかった`;
+    await modalP({cls:safe?'grn':'red',strip:tl(),title:R.endTitle,body:`<div class="verdict ${safe?'v-safe':'v-lost'}">${safe?(home?'自宅の2階で朝を迎えた':`${S.labels?s.n:'たどり着いた建物'}で助かった`):esc(why)}</div>`,btns:[{l:'つづける',c:'dark'}]});
+  }
+  if(!safe) log('中',why);
+  log('前',S.hm?'ハザードマップで、危ない場所を知っていた':'ハザードマップを見たことがなく、危ない場所を知らなかった');
+  if(F().lang&&!S.info) log('前','最後まで、放送や看板の意味がわからなかった');
+  if(F().deaf&&!S.info) log('前','最後まで、放送の内容がわからなかった');
+  finish(safe?'safe':'lost');
+}
+function finish(r){
+  const c=C();
+  (APP.res[RID]=APP.res[RID]||{})[S.cid]={r,log:S.log}; save();
+  const n=Object.keys(APP.res[RID]).length;
+  modal({cls:r==='safe'?'grn':'red',strip:c.name+'の結果',title:'',
+    body:`<div class="verdict v-${r}">${r==='safe'?'助かった':'取り残された'}</div><div class="big" style="color:var(--bad)">${c.fact[0]}</div><p style="text-align:center">${c.fact[1]}</p><p class="fact">出典：${c.fact[2]}</p>`,
+    btns:[{l:n>=4?'4人のまとめを見る':'ほかの人も体験する',c:'go',fn:()=>{n>=4?showSummary():showSelect()}}]});
+}
+
+/* ====================== 描画 ====================== */
+function renderHint(){
+  const h={fire:'<span><i style="background:var(--fire)"></i>火災（広がる）</span>',tsunami:'<span>数字＝高さ（m）。数字のないマスは1m</span>',rain:'<span>夜で、周りしか見えない</span><span><i style="background:var(--flood)"></i>浸水</span>'}[R.hazard];
+  $('#maphint').innerHTML=`<span><i style="background:var(--npc)"></i>近くの人</span><span><i style="background:#c25a14"></i>消防団員</span>${h}`;
+}
+function render(){
+  if(!S) return;
+  const Rch=(!busy&&!S.over)?myReach():[]; const rset=new Set(Rch.map(([x,y])=>x+','+y));
+  const danger=new Set(); if(S.info&&R.hazard==='fire') for(const [x,y] of cellsOf('*')) for(const [nx,ny] of nb(x,y)){if(TD(tileAt(nx,ny)).flam) danger.add(nx+','+ny)}
+  let h='';
+  for(let y=0;y<7;y++) for(let x=0;x<10;x++){
+    const c=S.map[y][x], t=TD(c), s=t.site; const k=x+','+y;
+    const fog=R.fog&&Math.abs(x-S.x)+Math.abs(y-S.y)>R.fog;
+    const hide=t.hz&&!S.hm;
+    let cls='cell '+(hide?'':(t.cls||'')); if(s) cls+=' site'; if(fog) cls+=' fog';
+    if(locked(c)&&S.lockKnown[c]) cls+=' lock';
+    const rc=rset.has(k); if(rc) cls+=' reach';
+    if(danger.has(k)&&!fog) cls+=' danger';
+    if(R.hazard==='tsunami'&&S.H!=null&&c!=='~'&&(!s||!s.h||s.h<=S.H)) cls+=' flooded';
+    const isHome=x===S.home[0]&&y===S.home[1]; if(isHome) cls+=' home';
+    let inner='';
+    if(s){ const first=tileAt(x-1,y)!==c&&tileAt(x,y-1)!==c;
+      if(S.labels){ if(first) inner+=`<span class="nm">${siteName(s)}</span>`; if(s.h&&!fog) inner+=`<span class="ht">${S.hm?s.h:'?'}${S.hm?'<small>m</small>':''}</span>` }
+      else if(!fog) inner+=`<span class="ht">${S.pointed&&R.npcGoal.includes(c)?'↑':'?'}</span>` }
+    else if(t.n&&!fog&&!hide&&(S.labels||t.lab==='all')){ const first=t.lab==='all'||(t.lab==='x0'?x===0:(tileAt(x-1,y)!==c&&tileAt(x,y-1)!==c)); if(first) inner+=`<span class="nm">${t.n}</span>` }
+    if(isHome&&!s&&!fog) inner+=`<span class="nm">${S.cid==='camp'?'キャンプ場':S.cid==='stu'||S.cid==='tour'||S.cid==='baby'?'スタート':S.cid==='trn'?'寮':'自宅'}</span>`;
+    let toks='';
+    if(!fog) toks=S.npcs.filter(n=>!['off','tower','with'].includes(n.mode)&&n.x===x&&n.y===y).map(n=>`<span class="tok ${n.id==='f'?'f':''} ${n.mode==='help'?'help':''}" title="${n.nm}">${n.ini}</span>`).join('');
+    if(S.x===x&&S.y===y){ const hp=helper(); toks+=`<span class="tok me" style="background:${C().col}" title="あなた">${C().ini}</span>${hp?`<span class="tok ${hp.id==='f'?'f':''}" title="${hp.nm}">${hp.ini}</span>`:''}` }
+    h+=`<div class="${cls}" data-x="${x}" data-y="${y}" ${rc?'role="button" tabindex="0" aria-label="ここへ移動"':''}>${inner}<div class="toks">${toks}</div></div>`;
+  }
+  const m=$('#map'); m.innerHTML=h;
+  m.querySelectorAll('.cell.reach').forEach(e=>{const go=()=>moveTo(+e.dataset.x,+e.dataset.y);e.onclick=go;e.onkeydown=ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();go()}}});
+  renderSide();
+}
+function renderSide(){
+  const c=C(), f=c.f, hp=helper(), s=siteOf(tileAt(S.x,S.y)), atSafe=s&&s.safe&&!s.tower;
+  const coming=S.npcs.find(n=>n.mode==='help');
+  let where=S.floors>0?`${S.floors}階（エレベーター停止）`:atSafe?(S.labels?`${s.n}にいる`:'建物の中にいる'):S.home2F?'自宅の2階':hp?`${hp.nm}と一緒`:coming?`${coming.nm}が向かっている`:'ひとり';
+  if(f.batt&&!S.charged) where+=`／電池 あと${S.batt*R.unit}分`;
+  const dis=busy||S.over?'disabled':'';
+  const nearNpc=S.npcs.some(n=>['go','safe','help'].includes(n.mode)&&Math.abs(n.x-S.x)+Math.abs(n.y-S.y)<=1);
+  let acts='';
+  if(S.floors>0) acts+=`<button class="btn go" type="button" data-a="down" ${dis}>階段を降りる<small>${R.unit}分で${hp?10:5}階</small></button>`;
+  acts+=`<button class="btn ${S.floors>0?'':'go'}" type="button" data-a="call" ${dis} ${hp||coming?'disabled':''}>${f.deaf?'身ぶりで助けを求める<small>'+R.unit+'分・となりの人だけ</small>':'「助けて！」と呼ぶ<small>'+R.unit+'分'+(f.noSignal?'・圏外なので、となりの人だけ':'')+'</small>'}</button>`;
+  if(!S.labels&&f.lang!=='camp') acts+=`<button class="btn" type="button" data-a="ask" ${dis} ${nearNpc?'':'disabled'}>となりの人に身ぶりで聞く<small>${R.unit}分・となりに人がいるとき</small></button>`;
+  if(!S.info&&f.app&&f.app!=='none') acts+=`<button class="btn" type="button" data-a="app" ${dis}>${f.deaf?'スマホの文字情報を見る':f.app==='infoOnly'?'スマホで天気を調べる':'翻訳アプリで調べる'}<small>${R.unit}分${f.app==='congest'?'・回線が混雑':''}</small></button>`;
+  if(f.home2F&&S.x===S.home[0]&&S.y===S.home[1]&&!S.home2F&&!isHomeHit()) acts+=`<button class="btn" type="button" data-a="home2F" ${dis}>自宅の2階で朝を待つ<small>垂直避難</small></button>`;
+  acts+=atSafe?`<button class="btn dark" type="button" data-a="stay" ${dis}>ここで待つ（最後まで）</button>`:`<button class="btn" type="button" data-a="wait" ${dis}>その場で待つ<small>${R.unit}分</small></button>`;
+  const elapsed=S.t*R.unit;
+  const infoTxt=S.info?R.info:'<b>？？？</b>';
+  $('#side').innerHTML=`
+   <div class="clock">
+     <div class="row"><div><div class="lbl">${R.name}・発災から${elapsed}分</div><div class="min">${tl()}</div></div>
+       <div><div class="lbl" style="text-align:right">状況</div><div class="warn">${infoTxt}</div></div></div>
+     ${R.eta&&S.info?`<div class="bar"><i style="width:${Math.min(100,S.t/R.eta*100)}%"></i></div>`:''}
+   </div>
+   <div class="me-card"><span class="face" style="background:${c.col}">${c.ini}</span><div><b>あなた＝${c.name}</b><span class="rule">${c.rule}</span>${hmChip(c.hm)}</div>
+     <div class="hp ${atSafe||S.charged?'ok':f.batt&&S.batt<=3?'ng':''}">${where}</div></div>
+   <div class="acts"><span class="tipline">${S.floors>0?'まず1階まで降りよう':`光ったマスをタップで移動（${myCost()===2?`1マス${R.unit*2}分`:`${mySpeed()}マスまで${R.unit}分`}）`}</span>${acts}</div>
+   ${S.feed.length?`<div class="feed">${S.feed.map(x=>`<span>・${esc(x)}</span>`).join('')}</div>`:''}`;
+  $('#side').querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>act(b.dataset.a));
+}
+function hmChip(k){return `<span class="hmc ${k?'hm1':'hm0'}">ハザードマップ：${k?'見たことがある':'見たことがない'}</span>`}
+function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>e.hidden=true,2600)}
+async function say(_t,title,text){
+  const f=F(); let body;
+  if(S.info) body=`<p>${esc(text)}</p>`;
+  else if(f.deaf) body='<p>周りの人が、何かに反応している。でも、何も聞こえない。</p>';
+  else if(f.noInfo==='rain') body='<p>防災無線が鳴っているが、雨音で聞き取れない。</p>';
+  else if(f.noInfo==='camp') body='<p>スマホに町からの通知は来ない。雨音しか聞こえない。</p>';
+  else body=`<p class="garble">${GARBLE}</p><p>何かを放送している。でも、意味がわからない。</p>`;
+  await modalP({cls:'yel',strip:tl(),title:S.info?title:'……',body,btns:[{l:'OK',c:'dark'}]});
+}
+
+/* ====================== 画面 ====================== */
+function view(v){for(const [id,k] of [['vRegion','region'],['vSelect','select'],['vPlay','play'],['vSum','sum']]) $('#'+id).hidden=v!==k; scrollTo(0,0)}
+function showRegions(){
+  S=null;R=null;RID=null; view('region'); if(location.hash) history.replaceState(null,'',location.pathname+location.search);
+  $('#vRegion').innerHTML=`
+   <h2>3つの町。それぞれ4人。<br>あなたが<em>その人</em>だったら？</h2>
+   <p>自分の班の地域を選んで、4人を1人ずつ体験しよう。1人あたり約4分。</p>
+   <div class="regions">${ORDER.map(id=>{const r=REG[id];const n=Object.keys(APP.res[id]||{}).length;
+     return `<button type="button" class="rg" data-r="${id}" style="--c:${r.col}"><span class="k">${r.type}</span><span class="nm">${r.name}</span><span class="sc">${r.scene}</span><span class="pr">${n?`${n}/4人 体験済み ▶`:'この町で体験する ▶'}</span></button>`}).join('')}</div>`;
+  $('#vRegion').querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{location.hash=b.dataset.r});
+}
+function openRegion(id){RID=id;R=REG[id];showSelect()}
+function showSelect(){
+  S=null; view('select'); const res=APP.res[RID]||{}; const n=Object.keys(res).length;
+  $('#vSelect').innerHTML=`
+   <div><button class="crumb" type="button" id="bBackR">← 3つの町</button></div>
+   <h2>${R.name}<br><em style="font-size:.6em">${R.type}</em></h2>
+   <div class="scene" style="--c:${R.col}">${R.scene}</div>
+   <div class="chars">${Object.entries(R.chars).map(([k,c])=>{const r=res[k];
+     return `<button type="button" class="ch" data-c="${k}">${r?`<span class="badge ${r.r==='safe'?'b-safe':'b-lost'}">${r.r==='safe'?'助かった':'取り残された'}</span>`:''}<span class="face" style="background:${c.col}">${c.ini}</span>
+       <span class="nm">${c.name}${c.age?`（${c.age}）`:''}<small>${c.role}</small></span><span class="rule">${c.rule}</span>${hmChip(c.hm)}<span class="go">${r?'もう一度 ▶':'この人になる ▶'}</span></button>`}).join('')}</div>
+   <div class="row-btns">${n?`<button class="btn dark" type="button" id="bSum">${n}人分のまとめを見る</button><button class="btn" type="button" id="bClear">この町の記録を消す</button>`:''}</div>`;
+  $('#bBackR').onclick=()=>{location.hash=''};
+  $('#vSelect').querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>startStage(b.dataset.c));
+  const s=$('#bSum'); if(s) s.onclick=showSummary;
+  const c=$('#bClear'); if(c) c.onclick=()=>modal({strip:'確認',title:'記録を消す？',body:`<p>${R.name}の結果が消えます。</p>`,btns:[{l:'消す',c:'red',fn:()=>{delete APP.res[RID];save();showSelect()}},{l:'やめる'}]});
+}
+function showSummary(){
+  S=null; view('sum'); const res=APP.res[RID]||{};
+  const ks=Object.keys(R.chars).filter(k=>res[k]);
+  const safeN=ks.filter(k=>res[k].r==='safe').length;
+  $('#vSum').innerHTML=`
+   <div><button class="crumb" type="button" id="bBackS">← ${R.name}の4人</button></div>
+   <div class="banner"><span style="font-size:12px;font-weight:900;letter-spacing:.12em;opacity:.75">${R.name}｜${R.type}</span>
+     <h2>助かったのは ${safeN}/${ks.length}人</h2><span style="font-size:13.5px;opacity:.85">ハザードマップを見ていた人：${ks.filter(k=>R.chars[k].hm&&res[k].r==='safe').length}/${ks.filter(k=>R.chars[k].hm).length}人が助かった　見ていなかった人：${ks.filter(k=>!R.chars[k].hm&&res[k].r==='safe').length}/${ks.filter(k=>!R.chars[k].hm).length}人が助かった</span><span style="font-size:12.5px;opacity:.7">${R.hmStat}（資料の架空設定）</span></div>
+   <div class="rgrid">${ks.map(k=>{const c=R.chars[k],r=res[k];
+     return `<div class="rcard"><div class="top"><span class="face" style="background:${c.col}">${c.ini}</span><div><b>${c.name}（${c.role}）</b><br>${hmChip(c.hm)} <span class="badge ${r.r==='safe'?'b-safe':'b-lost'}">${r.r==='safe'?'助かった':'取り残された'}</span></div></div>
+       <ul>${['前','中'].flatMap(ph=>r.log.filter(l=>l.ph===ph).map(l=>`<li><span>避難${ph}</span>${esc(l.t)}</li>`)).join('')||'<li><span></span>大きなトラブルなし</li>'}</ul></div>`}).join('')}</div>
+   <div class="facts">${R.facts.map(f=>`<div><b>${f[0]}</b>${f[1]}<small>${f[2]}</small></div>`).join('')}</div>
+   <div class="qs">${R.qs.map((q,i)=>`<div><span>話そう ${i+1}</span>${q}</div>`).join('')}</div>
+   <div class="row-btns"><button class="btn go" type="button" id="bBack">4人の一覧へ</button><button class="btn" type="button" id="bCopy">記録をコピー</button></div>
+   <textarea id="cpArea" readonly hidden aria-label="記録" style="width:100%;height:140px;font:inherit;font-size:13px;border-radius:8px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);padding:8px"></textarea>`;
+  $('#bBack').onclick=showSelect; $('#bBackS').onclick=showSelect;
+  $('#bCopy').onclick=()=>{
+    const txt=`【${R.name}｜${R.type}】\n`+ks.map(k=>{const r=res[k];return `■${R.chars[k].name}（${R.chars[k].role}）${r.r==='safe'?'助かった':'取り残された'}\n`+['前','中'].flatMap(ph=>r.log.filter(l=>l.ph===ph).map(l=>`・避難${ph}：${l.t}`)).join('\n')}).join('\n');
+    const ta=$('#cpArea');ta.value=txt;const fb=()=>{ta.hidden=false;ta.focus();ta.select();toast('下の欄を選んでコピーしてください')};
+    try{navigator.clipboard.writeText(txt).then(()=>toast('コピーしました'),fb)}catch(e){fb()}};
+}
+
+/* ====================== モーダル ====================== */
+function modal({cls,strip,title,body,btns}){
+  const c=$('#card'); c.className='card '+(cls||'');
+  c.innerHTML=`<div class="strip">${strip||''}</div><div class="in">${title?`<h2>${esc(title)}</h2>`:''}${body||''}<div class="btns" id="mb"></div></div>`;
+  (btns||[]).forEach(b=>{const e=document.createElement('button');e.type='button';e.className='btn '+(b.c||'');e.textContent=b.l;e.disabled=!!b.disabled;
+    e.onclick=()=>{if(b.keep){b.fn(e);return}closeModal();b.fn&&b.fn()};$('#mb').appendChild(e)});
+  $('#ov').hidden=false; c.scrollTop=0; const f=$('#mb button:not(:disabled)'); if(f) f.focus();
+}
+function modalP(o){return new Promise(res=>modal({...o,btns:o.btns.map(b=>({...b,fn:()=>{b.fn&&b.fn();res()}}))}))}
+function closeModal(){$('#ov').hidden=true}
+$('#bRule').onclick=()=>modal({strip:'あそびかた',title:'ルール',body:`<div class="guide"><ol>
+  <li>町を選び、4人から1人を選んで、その人になって逃げる。</li>
+  <li>光ったマスをタップで移動。動くと時間が進む。</li>
+  <li>「助けて！」と呼ぶと、近くの人が来てくれることがある。近くの人も自分で逃げていくので、早いほど届きやすい。</li>
+  <li>ハザードマップを見たことがある人は、地図に危ない場所（延焼・浸水・土砂）や避難場所の高さが表示される。見たことがない人には表示されない。</li>
+  <li>時間切れのときに安全な場所にいれば助かる。町ごとに危険がちがう（津波・広がる火災・夜の豪雨と土砂崩れ）。</li></ol></div>`,btns:[{l:'閉じる',c:'dark'}]});
+$('#bGuide').onclick=()=>modal({strip:'運営者向け',title:'11/6 事前学習での使い方',body:`<div class="guide">
+  <p>1人1台（スマホでも可）。各班は自分の地域を選び、その町の要支援者4人を1人ずつ体験する。</p>
+  <h3>班ごとに配るリンク</h3>
+  <p>このページのリンクの末尾に次をつけると、その町から始まる。</p>
+  <ul><li>青葉みらい市：<code>#aoba</code></li><li>みなと浜市：<code>#minato</code></li><li>やまびこ町：<code>#yamabiko</code></li></ul>
+  <h3>流れ（約20分）</h3>
+  <ol><li>1分：ルール説明（「4人を全員体験して」とだけ伝える）</li><li>15分：各自プレイ</li><li>5分：班でまとめ画面を見せ合い、「話そう」3問</li></ol>
+  <h3>地域分析資料とのつながり</h3>
+  <ul><li>地区名・施設・4人は、各町の資料の「重点的に検討する対象者」と「発災後に報告される問題」から選んだ</li><li>まとめ画面の数字は資料の架空設定。班会議でそのまま根拠として使える</li><li>記録は「避難前・中」に分かれている。「記録をコピー」で班会議へ</li></ul></div>`,btns:[{l:'閉じる',c:'dark'}]});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#ov').hidden){const b=[...document.querySelectorAll('#mb button')].find(x=>['閉じる','やめる'].includes(x.textContent));if(b)b.click()}});
+
+/* ====================== 起動 ====================== */
+function route(){const h=location.hash.slice(1); if(REG[h]) openRegion(h); else showRegions()}
+addEventListener('hashchange',()=>{busy=false;closeModal();route()});
+APP=loadApp()||{res:{}};
+route();
+</script>
+</body>
+</html>
